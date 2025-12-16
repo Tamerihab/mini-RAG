@@ -9,6 +9,8 @@ class Settings(BaseSettings):
     APP_NAME: str 
     APP_VERSION: str
     OPEN_API_KEY: str
+    FILE_ALLOWED_EXTENSIONS: list[str]
+    FILE_MAX_SIZE_MB: int
 
 
 def get_settings() -> Settings:
