@@ -11,6 +11,7 @@ class Settings(BaseSettings):
     OPEN_API_KEY: str
     FILE_ALLOWED_EXTENSIONS: list[str]
     FILE_MAX_SIZE_MB: int
+    FILE_DEFAULT_CHUNK_SIZE: int
 
 
 def get_settings() -> Settings:
