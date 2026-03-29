@@ -1,4 +1,4 @@
-from fastapi import FastAPI, APIRouter, Depends, UploadFile, status
+from fastapi import FastAPI, APIRouter, Depends, UploadFile, status, Request
 from fastapi.responses import JSONResponse
 from helpers.config import get_settings, Settings
 from controllers import DataController, ProjectController, ProcessController
@@ -6,6 +6,7 @@ import aiofiles
 from models import ResponseSignal
 import logging
 from .schemes.data import ProcessRequest
+from models.ProjectModel import ProjectModel
 
 logger = logging.getLogger('uvicorn.error')
 
@@ -17,10 +18,18 @@ data_router = APIRouter(
 
 @data_router.post("/upload/{project_id}")
 async def upload_data(
+    request: Request,
     project_id: str,
     file: UploadFile,
     app_settings: Settings = Depends(get_settings)
 ):
+
+    project_model = ProjectModel(
+        mongodb_client=request.app.mongodb
+    )
+
+    project = await project_model.get_project_or_create_one(project_id=project_id)
+
     data_controller = DataController()
     is_valid, result_signal = await data_controller.validate_file(file)
     if not is_valid:
@@ -30,7 +39,7 @@ async def upload_data(
                 "signal": result_signal
             }
         )
-    
+
     # there was a problem with the file read pointer as it was at the end of the file after validation so to fix that we need to reset it.
     await file.seek(0)
 
@@ -58,7 +67,7 @@ async def upload_data(
         status_code=status.HTTP_201_CREATED,
         content={
             "signal": ResponseSignal.FILE_UPLOAD_SUCCESS.value,
-            "file_id": file_id
+            "file_id": file_id,
         }
     )
 
@@ -90,7 +99,5 @@ async def process_endpoint(
                 "signal": ResponseSignal.FILE_PROCESSING_FAILED.value,
             }
         )
-    
-    return file_chunks
 
-  
+    return file_chunks
