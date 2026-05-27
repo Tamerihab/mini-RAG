@@ -8,7 +8,12 @@ import logging
 from .schemes.data import ProcessRequest
 from models.ProjectModel import ProjectModel
 from models.ChunkModel import ChunkModel
-from models.db_schemes import DataChunk
+from models.AssetModel import AssetModel
+from models.db_schemes import DataChunk, Asset
+from models.enums.AssetTypeEnum import AssetTypeEnum
+import os
+from bson import ObjectId
+
 
 logger = logging.getLogger('uvicorn.error')
 
@@ -64,12 +69,26 @@ async def upload_data(
                 "signal": ResponseSignal.FILE_UPLOAD_FAILED.value,
             }
         )
+    
+    # Save asset metadata to the database
+    asset_model = await AssetModel.create_instance(
+        mongodb_client=request.app.mongodb
+    )
+
+    asset_resource = Asset(
+        asset_project_id=ObjectId(project.id),
+        asset_type = AssetTypeEnum.FILE.value,
+        asset_name = file_id,
+        asset_size = os.path.getsize(file_path)
+    )  
+
+    asset_record =await asset_model.create_asset(asset_resource)
 
     return JSONResponse(
         status_code=status.HTTP_201_CREATED,
         content={
             "signal": ResponseSignal.FILE_UPLOAD_SUCCESS.value,
-            "file_id": file_id,
+            "file_id": str(asset_record.id),
         }
     )
 
