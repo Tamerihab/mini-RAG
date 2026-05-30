@@ -25,6 +25,9 @@ class ProcessController(BaseController):
 
         file_path = Path(self.project_path) / file_id
 
+        if not file_path.is_file():
+            return None
+
         if file_ext == ProcessingEnum.TXT.value:
             return TextLoader(file_path, encoding="utf-8")
 
