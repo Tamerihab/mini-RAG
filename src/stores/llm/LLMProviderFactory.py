@@ -24,6 +24,12 @@ class LLMProviderFactory:
             )
 
         if provider == LLMEnums.DEEPSEEK.value:
-            pass # TODO: Implement DeepSeekProvider and return instance here
+            return DeepSeekProvider(
+                api_key=self.config.get("DEEPSEEK_API_KEY"),
+                api_url=self.config.get("DEEPSEEK_API_URL"),
+                default_input_max_characters=self.config.get("INPUT_DEFAULT_MAX_CHARACTERS"),
+                default_generation_max_tokens=self.config.get("GENERATION_DEFAULT_MAX_TOKENS"),
+                default_generation_temperature=self.config.get("GENERATION_DEFAULT_TEMPERATURE"),
+            )
 
         return None

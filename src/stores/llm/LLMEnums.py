@@ -21,6 +21,10 @@ class CoHereEnums(Enum):
     DOCUMENT = "search_document"
     QUERY = "search_query"
 
+class DeepSeekEnums(Enum):
+    
+    SYSTEM = "system"
+    USER = "user"
 class DocumentTypeEnums(Enum):
 
     DOCUMENT = "document"
