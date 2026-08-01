@@ -35,6 +35,10 @@ class Settings(BaseSettings):
     GENERATION_DEFAULT_MAX_TOKENS: int= None
     GENERATION_DEFAULT_TEMPERATURE: float= None
 
+    VECTOR_DB_BACKEND: str= None
+    VECTOR_DB_PATH: str= None
+    VECTOR_DB_DISTANCE_METRIC: str= None
+
 
 def get_settings() -> Settings:
     return Settings()

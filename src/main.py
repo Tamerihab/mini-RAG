@@ -1,19 +1,23 @@
 from fastapi import FastAPI
-from routes import base, data
+from fastapi.concurrency import asynccontextmanager
+from routes import base, data, nlp
 #from motor.motor_asyncio import AsyncIOMotorClient # motor will be depercated so we will switch to pymongo instead 
 from pymongo import AsyncMongoClient
 from helpers.config import get_settings
 from stores.llm.LLMProviderFactory import LLMProviderFactory
+from stores.vectordb.VectorDBProviderFactory import VectorDBProviderFactory
 
 
 app = FastAPI()
 
-async def startup_db_client():
+@asynccontextmanager
+async def lifespan(app: FastAPI):
     settings = get_settings()
     app.mongodb_client = AsyncMongoClient(settings.MONGODB_URI)
     app.mongodb = app.mongodb_client[settings.MONGODB_DATABASE]
 
     llm_provider_factory = LLMProviderFactory(settings)
+    vectordb_provider_factory = VectorDBProviderFactory(settings)
 
     # generation client
     app.generation_client = llm_provider_factory.create(provider=settings.GENERATION_BACKEND)
@@ -21,15 +25,28 @@ async def startup_db_client():
 
     # embedding client
     app.embedding_client = llm_provider_factory.create(provider=settings.EMBEDDING_BACKEND)
-    app.embedding_client.set_embedding_model(model_id=settings.EMBEDDING_MODEL_ID, model_size=settings.EMBEDDING_MODEL_SIZE)
+    app.embedding_client.set_embedding_model(model_id=settings.EMBEDDING_MODEL_ID, embedding_size=settings.EMBEDDING_MODEL_SIZE)
 
-async def shutdown_db_client():
-   await app.mongodb_client.close()
+    #vector db client
+    app.vectordb_client = vectordb_provider_factory.create(provider_name=settings.VECTOR_DB_BACKEND)
+    app.vectordb_client.connect()
 
-app.router.lifespan.on_startup.append(startup_db_client)
-app.router.lifespan.on_shutdown.append(shutdown_db_client)
+    yield 
+
+    await app.mongodb_client.close()
+    await app.vectordb_client.disconnect()
+
+# async def shutdown_span():
+#    await app.mongodb_client.close()
+#    await app.vectordb_client.disconnect()
+
+# app.router.lifespan.on_startup.append(startup_span)
+# app.router.lifespan.on_shutdown.append(shutdown_span)
+app = FastAPI(lifespan=lifespan)
 
 app.include_router(base.base_router)
  
 app.include_router(data.data_router)
+
+app.include_router(nlp.nlp_router)
 

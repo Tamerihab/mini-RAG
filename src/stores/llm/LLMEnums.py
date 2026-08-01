@@ -3,9 +3,9 @@ from enum import Enum
 
 class LLMEnums(Enum):
 
-    OPENAI = "openai"
-    DEEPSEEK = "deepseek"
-    COHERE = "cohere"
+    OPENAI = "OPENAI"
+    DEEPSEEK = "DEEPSEEK"
+    COHERE = "COHERE"
 
 class OpenAIEnums(Enum):
 

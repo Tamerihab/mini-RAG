@@ -120,6 +120,14 @@ async def process_endpoint(
             asset_project_id=project.id,
             asset_name=process_request.file_id
         )
+
+        # Backward compatibility: upload currently returns Mongo _id as file_id.
+        if asset_record is None:
+            asset_record = await asset_model.get_asset_record_by_id(
+                asset_project_id=project.id,
+                asset_id=process_request.file_id
+            )
+
         if asset_record is None:
             return JSONResponse(
                 status_code=status.HTTP_400_BAD_REQUEST,

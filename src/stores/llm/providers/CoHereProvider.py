@@ -95,11 +95,11 @@ class CoHereProvider(LLMInterface):
         try:
             response = self.client.embed(
                 model=self.embedding_model_id,
-                text =[self.process_text(text)],
+                texts =[self.process_text(text)],
                 input_type=input_type,
                 embedding_types = ['float']
             )
-            if not response or not response.embeddings or len(response.embeddings) == 0 or not response.embeddings.float:
+            if not response or getattr(response, 'embeddings', None) is None or not response.embeddings.float:
                 self.logger.error("No embeddings returned from Cohere API")
                 return None
             return response.embeddings.float[0]
