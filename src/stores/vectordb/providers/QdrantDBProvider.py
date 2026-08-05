@@ -3,6 +3,7 @@ from ..VectorDBEnums import DistanceMetricEnums
 from qdrant_client import QdrantClient, models
 from typing import List
 import logging
+from models.db_schemes import RetrievedDocument
 
 
 class QdrantDBProvider(VectorDBInterface):
@@ -182,4 +183,13 @@ class QdrantDBProvider(VectorDBInterface):
             limit=limit,
         )
 
-        return response.points
+        if not response or len(response.points) == 0:
+            return None
+
+        return [
+            RetrievedDocument(**{
+                "text": point.payload["text"],
+                "score": point.score
+            }
+            ) for point in response.points
+        ]
