@@ -21,4 +21,5 @@ class ResponseSignal(Enum):
     COLLECTION_NOT_FOUND = "Collection not found in vector database."
     VECTOR_DB_SEARCH_ERROR = "Failed to search in vector database."
     VECTOR_DB_SEARCH_SUCCESS = "Search in vector database completed successfully."
-
+    RAG_ANSWER_ERROR = "Failed to generate answer using RAG."
+    RAG_ANSWER_SUCCESS = "Answer generated successfully using RAG."
