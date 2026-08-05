@@ -1,14 +1,15 @@
 from fastapi import FastAPI
 from fastapi.concurrency import asynccontextmanager
 from routes import base, data, nlp
-#from motor.motor_asyncio import AsyncIOMotorClient # motor will be depercated so we will switch to pymongo instead 
+# from motor.motor_asyncio import AsyncIOMotorClient # motor will be depercated so we will switch to pymongo instead
 from pymongo import AsyncMongoClient
 from helpers.config import get_settings
 from stores.llm.LLMProviderFactory import LLMProviderFactory
 from stores.vectordb.VectorDBProviderFactory import VectorDBProviderFactory
-
+from stores.llm.templates.template_parser import TemplateParser
 
 app = FastAPI()
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -20,18 +21,26 @@ async def lifespan(app: FastAPI):
     vectordb_provider_factory = VectorDBProviderFactory(settings)
 
     # generation client
-    app.generation_client = llm_provider_factory.create(provider=settings.GENERATION_BACKEND)
-    app.generation_client.set_generation_model(model_id=settings.GENERATION_MODEL_ID)
+    app.generation_client = llm_provider_factory.create(
+        provider=settings.GENERATION_BACKEND)
+    app.generation_client.set_generation_model(
+        model_id=settings.GENERATION_MODEL_ID)
 
     # embedding client
-    app.embedding_client = llm_provider_factory.create(provider=settings.EMBEDDING_BACKEND)
-    app.embedding_client.set_embedding_model(model_id=settings.EMBEDDING_MODEL_ID, embedding_size=settings.EMBEDDING_MODEL_SIZE)
+    app.embedding_client = llm_provider_factory.create(
+        provider=settings.EMBEDDING_BACKEND)
+    app.embedding_client.set_embedding_model(
+        model_id=settings.EMBEDDING_MODEL_ID, embedding_size=settings.EMBEDDING_MODEL_SIZE)
 
-    #vector db client
-    app.vectordb_client = vectordb_provider_factory.create(provider_name=settings.VECTOR_DB_BACKEND)
+    # vector db client
+    app.vectordb_client = vectordb_provider_factory.create(
+        provider_name=settings.VECTOR_DB_BACKEND)
     app.vectordb_client.connect()
 
-    yield 
+    app.template_parser = TemplateParser(
+        language=settings.PRIMARY_LANGUAGE, default_language=settings.DEFAULT_LANGUAGE)
+
+    yield
 
     await app.mongodb_client.close()
     await app.vectordb_client.disconnect()
@@ -45,8 +54,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(lifespan=lifespan)
 
 app.include_router(base.base_router)
- 
+
 app.include_router(data.data_router)
 
 app.include_router(nlp.nlp_router)
-

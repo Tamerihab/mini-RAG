@@ -39,6 +39,9 @@ class Settings(BaseSettings):
     VECTOR_DB_PATH: str= None
     VECTOR_DB_DISTANCE_METRIC: str= None
 
+    DEFAULT_LANGUAGE: str= None
+    PRIMARY_LANGUAGE: str= None
+
 
 def get_settings() -> Settings:
     return Settings()
