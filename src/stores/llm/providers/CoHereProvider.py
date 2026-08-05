@@ -28,6 +28,8 @@ class CoHereProvider(LLMInterface):
             api_key=self.api_key,
         )
 
+        self.enums = CoHereEnums
+
         self.logger = logging.getLogger(__name__)
 
     def set_generation_model(self, model_id: str):
@@ -95,9 +97,9 @@ class CoHereProvider(LLMInterface):
         try:
             response = self.client.embed(
                 model=self.embedding_model_id,
-                texts =[self.process_text(text)],
+                texts=[self.process_text(text)],
                 input_type=input_type,
-                embedding_types = ['float']
+                embedding_types=['float']
             )
             if not response or getattr(response, 'embeddings', None) is None or not response.embeddings.float:
                 self.logger.error("No embeddings returned from Cohere API")

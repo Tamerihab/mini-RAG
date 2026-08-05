@@ -28,8 +28,10 @@ class OpenAIProvider(LLMInterface):
 
         self.client = OpenAI(
             api_key=self.api_key,
-            base_url=self.api_url
+            base_url=self.api_url if self.api_url and len(self.api_url) else None
         )
+
+        self.enums = OpenAIEnums
 
         self.logger = logging.getLogger(__name__)
 
@@ -42,7 +44,7 @@ class OpenAIProvider(LLMInterface):
         self.embedding_size = embedding_size
         self.logger.info(
             f"Set embedding model to {model_id} with size {embedding_size}")
-        
+
     def process_text(self, text: str) -> str:
         return text[:self.default_input_max_characters].strip()
 
@@ -110,5 +112,5 @@ class OpenAIProvider(LLMInterface):
                          ) -> str:
         return {
             "role": role,
-            "content": prompt.self.process_text(prompt)
+            "content": self.process_text(prompt)
         }
