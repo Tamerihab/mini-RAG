@@ -12,7 +12,6 @@ from models.AssetModel import AssetModel
 from models.db_schemes import DataChunk, Asset
 from models.enums.AssetTypeEnum import AssetTypeEnum
 import os
-from bson import ObjectId
 
 
 logger = logging.getLogger('uvicorn.error')
@@ -26,13 +25,13 @@ data_router = APIRouter(
 @data_router.post("/upload/{project_id}")
 async def upload_data(
     request: Request,
-    project_id: str,
+    project_id: int,
     file: UploadFile,
     app_settings: Settings = Depends(get_settings)
 ):
 
     project_model = await ProjectModel.create_instance(
-        mongodb_client=request.app.mongodb
+        db_client=request.app.db_session
     )
 
     project = await project_model.get_project_or_create_one(project_id=project_id)
@@ -72,11 +71,11 @@ async def upload_data(
 
     # Save asset metadata to the database
     asset_model = await AssetModel.create_instance(
-        mongodb_client=request.app.mongodb
+        db_client=request.app.db_session
     )
 
     asset_resource = Asset(
-        asset_project_id=ObjectId(project.id),
+        asset_project_id=project.project_id,
         asset_type=AssetTypeEnum.FILE.value,
         asset_name=file_id,
         asset_size=os.path.getsize(file_path)
@@ -88,14 +87,14 @@ async def upload_data(
         status_code=status.HTTP_201_CREATED,
         content={
             "signal": ResponseSignal.FILE_UPLOAD_SUCCESS.value,
-            "file_id": str(asset_record.id),
+            "file_id": str(asset_record.asset_id),
         }
     )
 
 
 @data_router.post("/process/{project_id}")
 async def process_endpoint(
-    project_id: str,
+    project_id: int,
     http_request: Request,
     process_request: ProcessRequest,
 ):
@@ -105,26 +104,26 @@ async def process_endpoint(
     do_reset = process_request.do_reset
 
     project_model = await ProjectModel.create_instance(
-        mongodb_client=http_request.app.mongodb
+        db_client=http_request.app.db_session
     )
 
     project = await project_model.get_project_or_create_one(project_id=project_id)
 
     asset_model = await AssetModel.create_instance(
-        mongodb_client=http_request.app.mongodb
+        db_client=http_request.app.db_session
     )
 
     project_file_ids = {}
     if process_request.file_id:
         asset_record = await asset_model.get_asset_record(
-            asset_project_id=project.id,
+            asset_project_id=project.project_id,
             asset_name=process_request.file_id
         )
 
         # Backward compatibility: upload currently returns Mongo _id as file_id.
         if asset_record is None:
             asset_record = await asset_model.get_asset_record_by_id(
-                asset_project_id=project.id,
+                asset_project_id=project.project_id,
                 asset_id=process_request.file_id
             )
 
@@ -136,15 +135,15 @@ async def process_endpoint(
                 }
             )
         project_file_ids = {
-            asset_record.id: asset_record.asset_name
+            asset_record.asset_id: asset_record.asset_name
         }
     else:
         project_files = await asset_model.get_all_project_assets(
-            asset_project_id=project.id,
+            asset_project_id=project.project_id,
             asset_type=AssetTypeEnum.FILE.value
         )
         project_file_ids = {
-            record.id: record.asset_name for record in project_files
+            record.asset_id: record.asset_name for record in project_files
         }
 
     if len(project_file_ids) == 0:
@@ -162,12 +161,12 @@ async def process_endpoint(
     no_files = 0
 
     chunk_model = await ChunkModel.create_instance(
-        mongodb_client=http_request.app.mongodb
+        db_client=http_request.app.db_session
     )
 
     if do_reset == 1:
 
-        _ = await chunk_model.delete_chunks_by_project_id(project_id=project.id)
+        _ = await chunk_model.delete_chunks_by_project_id(project_id=project.project_id)
 
     for asset_id, file_id in project_file_ids.items():
         file_content = process_controller.get_file_content(file_id=file_id)
@@ -199,7 +198,7 @@ async def process_endpoint(
                 chunk_text=chunk.page_content,
                 chunk_metadata=chunk.metadata,
                 chunk_order=i + 1,
-                chunk_project_id=project.id,
+                chunk_project_id=project.project_id,
                 chunk_asset_id=asset_id
             )
             for i, chunk in enumerate(file_chunks)
