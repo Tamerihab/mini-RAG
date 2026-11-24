@@ -1,12 +1,11 @@
 from fastapi import FastAPI
 from fastapi.concurrency import asynccontextmanager
 from routes import base, data, nlp
-# from motor.motor_asyncio import AsyncIOMotorClient # motor will be depercated so we will switch to pymongo instead
-from pymongo import AsyncMongoClient
 from helpers.config import get_settings
 from stores.llm.LLMProviderFactory import LLMProviderFactory
 from stores.vectordb.VectorDBProviderFactory import VectorDBProviderFactory
 from stores.llm.templates.template_parser import TemplateParser
+from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
 app = FastAPI()
 
@@ -14,8 +13,13 @@ app = FastAPI()
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     settings = get_settings()
-    app.mongodb_client = AsyncMongoClient(settings.MONGODB_URI)
-    app.mongodb = app.mongodb_client[settings.MONGODB_DATABASE]
+
+    postgres_conn = f"postgresql+asyncpg://{settings.POSTGRES_USERNAME}:{settings.POSTGRES_PASSWORD}@{settings.POSTGRES_HOST}:{settings.POSTGRES_PORT}/{settings.POSTGRES_MAIN_DATABASE}"
+
+    app.db_engine = create_async_engine(postgres_conn)
+    app.db_session = async_sessionmaker(
+        bind=app.db_engine,
+        expire_on_commit=False)
 
     llm_provider_factory = LLMProviderFactory(settings)
     vectordb_provider_factory = VectorDBProviderFactory(settings)
@@ -41,8 +45,8 @@ async def lifespan(app: FastAPI):
         language=settings.PRIMARY_LANGUAGE, default_language=settings.DEFAULT_LANGUAGE)
 
     yield
-
-    await app.mongodb_client.close()
+ 
+    await app.db_engine.dispose()
     await app.vectordb_client.disconnect()
 
 # async def shutdown_span():

@@ -16,7 +16,7 @@ class ProjectController(BaseController):
         Returns:
             str: The constructed file path for the project.
         """
-        project_dir = self.files_dir / project_id
+        project_dir = self.files_dir / str(project_id)
 
         if not project_dir.exists():
             project_dir.mkdir(parents=True, exist_ok=True)
